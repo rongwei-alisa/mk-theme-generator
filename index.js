@@ -209,7 +209,7 @@ function isValidColor(color) {
       [3, 4, 6, 8].indexOf(color.length) > -1 && !isNaN(parseInt(color, 16))
     );
   }
-  return /^(rgb|hsl)a?\((\d+%?(deg|rad|grad|turn)?[,\s]+){2,3}[\s\/]*[\d\.]+%?\)$/i.test(
+  return /^(rgb|hsl|hsv)a?\((\d+%?(deg|rad|grad|turn)?[,\s]+){2,3}[\s\/]*[\d\.]+%?\)$/i.test(
     color
   );
 }
@@ -290,7 +290,7 @@ function generateTheme({
       content += `\n${customStyles}`;
     }
     const hashCode = hash.sha256().update(content).digest('hex');
-    if(hashCode === hashCache){
+    if (hashCode === hashCache) {
       resolve(cssCache);
       return;
     }
@@ -306,7 +306,7 @@ function generateTheme({
       src: varFile
     })
       .then(colorsLess => {
-        const mappings = Object.assign(generateColorMap(colorsLess), generateColorMap(mainLessFile));
+        const mappings = Object.assign(colorsLess, mainLessFile);
         return [mappings, colorsLess];
       })
       .then(([mappings, colorsLess]) => {
@@ -344,7 +344,7 @@ function generateTheme({
               colorsLess
             ];
           })
-          
+
         });
       })
       .then(([css, mappings, colorsLess]) => {
@@ -377,7 +377,7 @@ function generateTheme({
         if (outputFilePath) {
           fs.writeFileSync(outputFilePath, css);
           console.log(
-            `🌈 Theme generated successfully. OutputFile: ${outputFilePath}`
+            `Theme generated successfully. OutputFile: ${outputFilePath}`
           );
         } else {
           console.log(`Theme generated successfully`);

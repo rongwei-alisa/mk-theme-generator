@@ -1,11 +1,11 @@
-# antd-theme-generator
+# mk-theme-generator
 
 This script generates color specific styles/less file which you can use to change theme dynamically in browser
 
 ## Example:
 
 ```
-const { generateTheme } = require('antd-theme-generator');
+const { generateTheme } = require('mk-theme-generator');
 
 const options = {
   antDir: path.join(__dirname, './node_modules/antd'),
