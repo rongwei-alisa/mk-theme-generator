@@ -14,6 +14,13 @@ function randomColor() {
   return '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
 }
 
+function camelSplit(str) {
+  if (str) {
+    str = str.replace(/^./, function (str) { return str.toLowerCase(); })
+      .replace(/([A-Z])/g, '-$1');
+  }
+  return str.toLowerCase();
+}
 /*
   Recursively get the color code assigned to a variable e.g.
   @primary-color: #1890ff;
@@ -44,7 +51,7 @@ function getColor(varName, mappings) {
     '@normal-color': '#d9d9d9',
     '@primary-6': '#1890ff',
     '@heading-color': '#fa8c16',
-    '@text-color': '#cccccc',
+    '@text-color': '#ccc',
     ....
   }
 */
@@ -82,7 +89,7 @@ function generateColorMap(content) {
  Input: 
  .body { 
     font-family: 'Lato';
-    background: #cccccc;
+    background: #ccc;
     color: #000;
     padding: 0;
     pargin: 0
@@ -90,7 +97,7 @@ function generateColorMap(content) {
 
  Output: 
   .body {
-    background: #cccccc;
+    background: #ccc;
     color: #000;
  }
 */
@@ -156,14 +163,14 @@ function render(text, paths) {
   //variabables.less
     @primary-color : #1890ff;
     @heading-color : #fa8c16;
-    @text-color : #cccccc;
+    @text-color : #ccc;
   
     to
 
     {
       '@primary-color' : '#1890ff',
       '@heading-color' : '#fa8c16',
-      '@text-color' : '#cccccc'
+      '@text-color' : '#ccc'
     }
 
 */
@@ -217,9 +224,11 @@ function isValidColor(color) {
 function getCssModulesStyles(stylesDir, antdStylesDir) {
   const styles = glob.sync(path.join(stylesDir, './**/*.less'));
   return Promise.all(
-    styles.map(p =>
-      less
-        .render(fs.readFileSync(p).toString(), {
+    styles.map(p => {
+      let str = fs.readFileSync(p).toString();
+      str = str.replace(/\@import +("|')~root/, `@import $1${process.cwd()}/src`);
+      return less
+        .render(str, {
           paths: [
             stylesDir,
             antdStylesDir,
@@ -229,9 +238,37 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
           plugins: [new NpmImportPlugin({ prefix: '~' })],
         })
         .catch(() => '\n')
-    )
+    })
   )
-    .then(csss => csss.map(c => c.css).join('\n'))
+    .then(csss => {
+      return Promise.all(
+        csss.map((css, index) => {
+          if (typeof css === 'string') {
+            return new Promise(resolve => resolve('\n'));
+          }
+          return postcss([require("postcss-modules")({
+            generateScopedName: function (name, filename, css) {
+              var i = css.indexOf("." + name);
+              if (i > -1) {
+                let componentName = filename.replace(/\\/g, '/').split('/').slice(-2, -1);
+                componentName = camelSplit(componentName[0]);
+                return `${componentName}-${name}`;
+              } else {
+                return name;
+              }
+            },
+          })]).process(css.css, {
+            parser: less.parser,
+            from: styles[index],
+          })
+        })
+      )
+    })
+    .then(csss => {
+      return csss.map(c => {
+        return c.css
+      }).join('\n')
+    })
     .catch(err => {
       console.log('Error', err);
       return '';
@@ -306,7 +343,7 @@ function generateTheme({
       src: varFile
     })
       .then(colorsLess => {
-        const mappings = Object.assign(colorsLess, mainLessFile);
+        const mappings = Object.assign(generateColorMap(colorsLess), generateColorMap(mainLessFile));
         return [mappings, colorsLess];
       })
       .then(([mappings, colorsLess]) => {
@@ -337,14 +374,11 @@ function generateTheme({
         themeCompiledVars = getMatches(css, regex);
         content = `${content}\n${colorsLess}`;
         return render(content, lessPaths).then(({ css }) => {
-          return getCssModulesStyles(stylesDir, antdStylesDir).then(customCss => {
-            return [
-              `${customCss}\n${css}`,
-              mappings,
-              colorsLess
-            ];
-          })
-
+          return getCssModulesStyles(stylesDir, antdStylesDir).then(customCss => [
+            `${customCss}\n${css}`,
+            mappings,
+            colorsLess
+          ])
         });
       })
       .then(([css, mappings, colorsLess]) => {
