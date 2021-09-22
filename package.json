@@ -22,12 +22,12 @@
     "css"
   ],
   "author": {
-    "name": "mzohaibqc",
-    "url": "https://github.com/mzohaibqc"
+    "name": "rongwei-alisa",
+    "url": "https://github.com/rongwei-alisa"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/mzohaibqc/antd-theme-generator"
+    "url": "git@github.com:rongwei-alisa/mk-theme-generator.git"
   },
   "license": "ISC"
 }
