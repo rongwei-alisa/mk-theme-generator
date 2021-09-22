@@ -283,6 +283,7 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
 function generateTheme({
   antDir,
   antdStylesDir,
+  businessDir,
   stylesDir,
   mainLessFile,
   varFile,
@@ -292,13 +293,13 @@ function generateTheme({
 }) {
   return new Promise((resolve, reject) => {
     /*
-    Ant Design Specific Files (Change according to your project structure)
-    You can even use different less based css framework and create color.less for  that
-  
-    - antDir - ant design instalation path
-    - entry - Ant Design less main file / entry file
-    - styles - Ant Design less styles for each component
-  */
+      Ant Design Specific Files (Change according to your project structure)
+      You can even use different less based css framework and create color.less for  that
+    
+      - antDir - ant design instalation path
+      - entry - Ant Design less main file / entry file
+      - styles - Ant Design less styles for each component
+    */
     let antdPath;
     if (antdStylesDir) {
       antdPath = antdStylesDir;
@@ -307,6 +308,17 @@ function generateTheme({
     }
     const entry = path.join(antdPath, './style/index.less');
     const styles = glob.sync(path.join(antdPath, './*/style/index.less'));
+
+    /*
+      Maycur Business Specific Files (Change according to your project structure)
+      You can even use different less based css framework and create color.less for  that
+    
+      - businessDir - Maycur Business instalation path
+      - businessEntry - Maycur Business less main file / entry file
+      - businessStyles - Maycur Business less styles for each component
+    */
+
+    const businessStyles = glob.sync(path.join(businessDir, './**/style/*.less'));
 
     /*
       You own custom styles (Change according to your project structure)
@@ -319,7 +331,7 @@ function generateTheme({
 
     let content = fs.readFileSync(entry).toString();
     content += "\n";
-    styles.forEach(style => {
+    styles.concat(businessStyles).forEach(style => {
       content += `@import "${style}";\n`;
     });
     if (mainLessFile) {
@@ -336,7 +348,8 @@ function generateTheme({
     let themeVars = themeVariables || ["@primary-color"];
     const lessPaths = [
       path.join(antdPath, "./style"),
-      stylesDir
+      stylesDir,
+      path.join(businessDir, "./style")
     ];
 
     return bundle({
