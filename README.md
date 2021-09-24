@@ -1,3 +1,10 @@
+<!--
+ * @Author: RongWei
+ * @Date: 2021-09-13 20:46:17
+ * @LastEditors: RongWei
+ * @LastEditTime: 2021-09-24 15:16:11
+ * @Description: file content
+-->
 # mk-theme-generator
 
 This script generates color specific styles/less file which you can use to change theme dynamically in browser
@@ -5,10 +12,11 @@ This script generates color specific styles/less file which you can use to chang
 ## Example:
 
 ```
-const { generateTheme } = require('mk-theme-generator');
+const { generateTheme } = require('@maycur/theme-generator');
 
 const options = {
-  antDir: path.join(__dirname, './node_modules/antd'),
+  antdStylesDir: path.join(__dirname, './node_modules/maycur-antd/lib'),
+  businessStylesDir: path.join(__dirname, '.node_modules/@maycur/business/lib'), // 业务组件库目录
   stylesDir: path.join(__dirname, './src/styles'),
   varFile: path.join(__dirname, './src/styles/variables.less'), // default path is Ant Design default.less file
   mainLessFile: path.join(__dirname, './src/styles/index.less'),

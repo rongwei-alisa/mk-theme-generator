@@ -281,9 +281,8 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
   By default color.less will be generated in /public directory
 */
 function generateTheme({
-  antDir,
   antdStylesDir,
-  businessDir,
+  businessStylesDir,
   stylesDir,
   mainLessFile,
   varFile,
@@ -296,29 +295,22 @@ function generateTheme({
       Ant Design Specific Files (Change according to your project structure)
       You can even use different less based css framework and create color.less for  that
     
-      - antDir - ant design instalation path
       - entry - Ant Design less main file / entry file
       - styles - Ant Design less styles for each component
     */
-    let antdPath;
-    if (antdStylesDir) {
-      antdPath = antdStylesDir;
-    } else {
-      antdPath = path.join(antDir, 'lib');
-    }
-    const entry = path.join(antdPath, './style/index.less');
-    const styles = glob.sync(path.join(antdPath, './*/style/index.less'));
+    const entry = path.join(antdStylesDir, './style/index.less');
+    const styles = glob.sync(path.join(antdStylesDir, './*/style/index.less'));
 
     /*
       Maycur Business Specific Files (Change according to your project structure)
       You can even use different less based css framework and create color.less for  that
     
-      - businessDir - Maycur Business instalation path
+      - businessStylesDir - Maycur Business instalation path
       - businessEntry - Maycur Business less main file / entry file
       - businessStyles - Maycur Business less styles for each component
     */
 
-    const businessStyles = glob.sync(path.join(businessDir, './**/style/*.less'));
+    const businessStyles = glob.sync(path.join(businessStylesDir, './**/style/*.less'));
 
     /*
       You own custom styles (Change according to your project structure)
@@ -327,7 +319,7 @@ function generateTheme({
       - mainLessFile - less main file which imports all other custom styles
       - varFile - variable file containing ant design specific and your own custom variables
     */
-    varFile = varFile || path.join(antdPath, "./style/themes/default.less");
+    varFile = varFile || path.join(antdStylesDir, "./style/themes/default.less");
 
     let content = fs.readFileSync(entry).toString();
     content += "\n";
@@ -347,9 +339,9 @@ function generateTheme({
     let themeCompiledVars = {};
     let themeVars = themeVariables || ["@primary-color"];
     const lessPaths = [
-      path.join(antdPath, "./style"),
+      path.join(antdStylesDir, "./style"),
       stylesDir,
-      path.join(businessDir, "./style")
+      path.join(businessStylesDir, "./style")
     ];
 
     return bundle({
