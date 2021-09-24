@@ -284,7 +284,6 @@ function generateTheme({
   antdStylesDir,
   businessStylesDir,
   stylesDir,
-  mainLessFile,
   varFile,
   outputFilePath,
   cssModules = false,
@@ -309,14 +308,12 @@ function generateTheme({
       - businessEntry - Maycur Business less main file / entry file
       - businessStyles - Maycur Business less styles for each component
     */
-
     const businessStyles = glob.sync(path.join(businessStylesDir, './**/style/*.less'));
 
     /*
       You own custom styles (Change according to your project structure)
       
       - stylesDir - styles directory containing all less files 
-      - mainLessFile - less main file which imports all other custom styles
       - varFile - variable file containing ant design specific and your own custom variables
     */
     varFile = varFile || path.join(antdStylesDir, "./style/themes/default.less");
@@ -326,10 +323,6 @@ function generateTheme({
     styles.concat(businessStyles).forEach(style => {
       content += `@import "${style}";\n`;
     });
-    if (mainLessFile) {
-      const customStyles = fs.readFileSync(mainLessFile).toString();
-      content += `\n${customStyles}`;
-    }
     const hashCode = hash.sha256().update(content).digest('hex');
     if (hashCode === hashCache) {
       resolve(cssCache);
@@ -348,7 +341,7 @@ function generateTheme({
       src: varFile
     })
       .then(colorsLess => {
-        const mappings = Object.assign(generateColorMap(colorsLess), generateColorMap(mainLessFile));
+        const mappings = generateColorMap(colorsLess);
         return [mappings, colorsLess];
       })
       .then(([mappings, colorsLess]) => {
