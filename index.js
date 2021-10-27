@@ -14,13 +14,6 @@ function randomColor() {
   return '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
 }
 
-function camelSplit(str) {
-  if (str) {
-    str = str.replace(/^./, function (str) { return str.toLowerCase(); })
-      .replace(/([A-Z])/g, '-$1');
-  }
-  return str.toLowerCase();
-}
 /*
   Recursively get the color code assigned to a variable e.g.
   @primary-color: #1890ff;
@@ -125,9 +118,10 @@ const reducePlugin = postcss.plugin("reducePlugin", () => {
     }
   };
   return css => {
-    css.walkAtRules(atRule => {
-      atRule.remove();
-    });
+    // NOTE: 会导致 媒体查询 或 动画keyframe 相关的样式颜色覆盖失效
+    // css.walkAtRules(atRule => {
+    //   atRule.remove();
+    // });
 
     css.walkRules(cleanRule);
 
@@ -221,11 +215,16 @@ function isValidColor(color) {
   );
 }
 
-function getCssModulesStyles(stylesDir, antdStylesDir) {
+function getClassNames(name) {
+  return name;
+}
+
+function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }) {
   const styles = glob.sync(path.join(stylesDir, './**/*.less'));
   return Promise.all(
     styles.map(p => {
       let str = fs.readFileSync(p).toString();
+      // NOTE modify: 将 less 文件中的 ～root 替换为 src 目录
       str = str.replace(/\@import +("|')~root/, `@import $1${process.cwd()}/src`);
       return less
         .render(str, {
@@ -240,6 +239,7 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
         .catch(() => '\n')
     })
   )
+    // NOTE modify: 增加对 css module 的支持
     .then(csss => {
       return Promise.all(
         csss.map((css, index) => {
@@ -247,16 +247,7 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
             return new Promise(resolve => resolve('\n'));
           }
           return postcss([require("postcss-modules")({
-            generateScopedName: function (name, filename, css) {
-              var i = css.indexOf("." + name);
-              if (i > -1) {
-                let componentName = filename.replace(/\\/g, '/').split('/').slice(-2, -1);
-                componentName = camelSplit(componentName[0]);
-                return `${componentName}-${name}`;
-              } else {
-                return name;
-              }
-            },
+            generateScopedName: generateScopedName || getClassNames,
           })]).process(css.css, {
             parser: less.parser,
             from: styles[index],
@@ -282,12 +273,13 @@ function getCssModulesStyles(stylesDir, antdStylesDir) {
 */
 function generateTheme({
   antdStylesDir,
-  businessStylesDir,
+  businessStylesDir, // NOTE modify: 业务组件库样式所在目录
   stylesDir,
   varFile,
   outputFilePath,
   cssModules = false,
-  themeVariables = ['@primary-color']
+  themeVariables = ['@primary-color'],
+  generateScopedName, // NOTE modify: 自定义生成局部 css 类名
 }) {
   return new Promise((resolve, reject) => {
     /*
@@ -308,7 +300,10 @@ function generateTheme({
       - businessEntry - Maycur Business less main file / entry file
       - businessStyles - Maycur Business less styles for each component
     */
-    const businessStyles = glob.sync(path.join(businessStylesDir, './**/style/*.less'));
+    let businessStyles = [];
+    if (businessStylesDir) {
+      businessStyles = glob.sync(path.join(businessStylesDir, './**/style/*.less'));
+    }
 
     /*
       You own custom styles (Change according to your project structure)
@@ -334,8 +329,10 @@ function generateTheme({
     const lessPaths = [
       path.join(antdStylesDir, "./style"),
       stylesDir,
-      path.join(businessStylesDir, "./style")
     ];
+    if (businessStylesDir) {
+      lessPaths.push(path.join(businessStylesDir, "./style"));
+    }
 
     return bundle({
       src: varFile
@@ -352,12 +349,13 @@ function generateTheme({
           css = `.${varName.replace("@", "")} { color: ${color}; }\n ${css}`;
         });
 
-        themeVars.forEach(varName => {
-          [1, 2, 3, 4, 5, 7].forEach(key => {
-            let name = varName === '@primary-color' ? `@primary-${key}` : `${varName}-${key}`;
-            css = `.${name.replace("@", "")} { color: ${getShade(name)}; }\n ${css}`;
-          });
-        });
+        // NOTE modify: antd-mobile 暂不支持 colorPalette 函数
+        // themeVars.forEach(varName => {
+        //   [1, 2, 3, 4, 5, 7].forEach(key => {
+        //     let name = varName === '@primary-color' ? `@primary-${key}` : `${varName}-${key}`;
+        //     css = `.${name.replace("@", "")} { color: ${getShade(name)}; }\n ${css}`;
+        //   });
+        // });
 
         css = `${colorsLess}\n${css}`;
         return render(css, lessPaths).then(({ css }) => [
@@ -372,7 +370,7 @@ function generateTheme({
         themeCompiledVars = getMatches(css, regex);
         content = `${content}\n${colorsLess}`;
         return render(content, lessPaths).then(({ css }) => {
-          return getCssModulesStyles(stylesDir, antdStylesDir).then(customCss => [
+          return getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }).then(customCss => [
             `${customCss}\n${css}`,
             mappings,
             colorsLess
