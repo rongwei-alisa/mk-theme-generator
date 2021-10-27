@@ -350,12 +350,12 @@ function generateTheme({
         });
 
         // NOTE modify: antd-mobile 暂不支持 colorPalette 函数
-        // themeVars.forEach(varName => {
-        //   [1, 2, 3, 4, 5, 7].forEach(key => {
-        //     let name = varName === '@primary-color' ? `@primary-${key}` : `${varName}-${key}`;
-        //     css = `.${name.replace("@", "")} { color: ${getShade(name)}; }\n ${css}`;
-        //   });
-        // });
+        themeVars.forEach(varName => {
+          [1, 2, 3, 4, 5, 7].forEach(key => {
+            let name = varName === '@primary-color' ? `@primary-${key}` : `${varName}-${key}`;
+            css = `.${name.replace("@", "")} { color: ${getShade(name)}; }\n ${css}`;
+          });
+        });
 
         css = `${colorsLess}\n${css}`;
         return render(css, lessPaths).then(({ css }) => [
