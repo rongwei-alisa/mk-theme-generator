@@ -189,7 +189,7 @@ function getLessVars(filtPath) {
 */
 function getShade(varName) {
   let [, className, number] = varName.match(/(.*)-(\d)/);
-  if (/primary-\d/.test(varName)) className = '@primary-color';
+  if (/^primary-\d/.test(varName)) className = '@primary-color';
   return 'color(~`colorPalette("@{' + className.replace('@', '') + '}", ' + number + ")`)";
 }
 
