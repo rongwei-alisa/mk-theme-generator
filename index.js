@@ -189,7 +189,7 @@ function getLessVars(filtPath) {
 */
 function getShade(varName) {
   let [, className, number] = varName.match(/(.*)-(\d)/);
-  if (/^primary-\d/.test(varName)) className = '@primary-color';
+  if (/^@primary-\d/.test(varName)) className = '@primary-color';
   return 'color(~`colorPalette("@{' + className.replace('@', '') + '}", ' + number + ")`)";
 }
 
@@ -225,7 +225,7 @@ function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }) {
     styles.map(p => {
       let str = fs.readFileSync(p).toString();
       // NOTE modify: 将 less 文件中的 ～root 替换为 src 目录
-      str = str.replace(/\@import +("|')~root/, `@import $1${process.cwd()}/src`);
+      str = str.replace(/\@import +("|')~(.)\//, `@import $1${process.cwd()}/src/`);
       return less
         .render(str, {
           paths: [
