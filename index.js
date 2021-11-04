@@ -219,13 +219,14 @@ function getClassNames(name) {
   return name;
 }
 
-function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }) {
+function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName, srcAlias = '@', resolvePath = 'src/' }) {
   const styles = glob.sync(path.join(stylesDir, './**/*.less'));
   return Promise.all(
     styles.map(p => {
       let str = fs.readFileSync(p).toString();
+      let reg = new RegExp(`\@import +("|')~(${srcAlias})\/`);
       // NOTE modify: 将 less 文件中的 ～root 替换为 src 目录
-      str = str.replace(/\@import +("|')~(.)\//, `@import $1${process.cwd()}/src/`);
+      str = str.replace(reg, `@import $1${process.cwd()}/${resolvePath}`);
       return less
         .render(str, {
           paths: [
@@ -236,7 +237,10 @@ function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }) {
           javascriptEnabled: true,
           plugins: [new NpmImportPlugin({ prefix: '~' })],
         })
-        .catch(() => '\n')
+        .catch((error) => {
+          // console.log(error);
+          return '\n'
+        })
     })
   )
     // NOTE modify: 增加对 css module 的支持
@@ -277,7 +281,8 @@ function generateTheme({
   stylesDir,
   varFile,
   outputFilePath,
-  cssModules = false,
+  srcAlias,
+  resolvePath,
   themeVariables = ['@primary-color'],
   generateScopedName, // NOTE modify: 自定义生成局部 css 类名
 }) {
@@ -370,11 +375,12 @@ function generateTheme({
         themeCompiledVars = getMatches(css, regex);
         content = `${content}\n${colorsLess}`;
         return render(content, lessPaths).then(({ css }) => {
-          return getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName }).then(customCss => [
-            `${customCss}\n${css}`,
-            mappings,
-            colorsLess
-          ])
+          return getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName, srcAlias, resolvePath })
+            .then(customCss => [
+              `${customCss}\n${css}`,
+              mappings,
+              colorsLess
+            ])
         });
       })
       .then(([css, mappings, colorsLess]) => {
