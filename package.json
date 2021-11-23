@@ -1,6 +1,6 @@
 {
   "name": "@maycur/theme-generator",
-  "version": "1.0.16",
+  "version": "1.0.18",
   "description": "This a script to generate color specific styles less file and which you can use to change theme dynamically in browser",
   "main": "index.js",
   "scripts": {

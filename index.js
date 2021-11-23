@@ -76,6 +76,12 @@ function generateColorMap(content) {
     }, {});
 }
 
+const isContainColor = function (str) {
+  return str.match(/#[0-9a-fA-F]{8}/) ||
+    str.match(/#[0-9a-fA-F]{6}/) ||
+    str.match(/#[0-9a-fA-F]{3,4}/);
+}
+
 /*
  This plugin will remove all css rules except those are related to colors
  e.g.
@@ -106,7 +112,8 @@ const reducePlugin = postcss.plugin("reducePlugin", () => {
         !decl.prop.includes("color") &&
         !decl.prop.includes("background") &&
         !decl.prop.includes("border") &&
-        !decl.prop.includes("box-shadow")
+        !decl.prop.includes("box-shadow") ||
+        (decl.prop.includes("background") && !decl.value.includes('#'))
       ) {
         decl.remove();
       } else {
@@ -224,7 +231,7 @@ function getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName, src
   return Promise.all(
     styles.map(p => {
       let str = fs.readFileSync(p).toString();
-      let reg = new RegExp(`\@import +("|')~(${srcAlias})\/`);
+      let reg = new RegExp(`\@import +("|')~(${srcAlias})\/`, 'g');
       // NOTE modify: 将 less 文件中的 ～root 替换为 src 目录
       str = str.replace(reg, `@import $1${process.cwd()}/${resolvePath}`);
       return less
