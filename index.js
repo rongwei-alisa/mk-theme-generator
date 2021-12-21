@@ -6,9 +6,12 @@ const less = require("less");
 const bundle = require("less-bundle-promise");
 const hash = require("hash.js");
 const NpmImportPlugin = require('less-plugin-npm-import');
+const lessToJs = require('less-vars-to-js');
 
 let hashCache = "";
 let cssCache = "";
+let colorVars = {};
+let onlyRemainMainColor;
 
 function randomColor() {
   return '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
@@ -76,10 +79,18 @@ function generateColorMap(content) {
     }, {});
 }
 
-const isContainColor = function (str) {
-  return str.match(/#[0-9a-fA-F]{8}/) ||
+const isContainColor = function (str, prop) {
+  const matchResult = str.match(/#[0-9a-fA-F]{8}/) ||
     str.match(/#[0-9a-fA-F]{6}/) ||
     str.match(/#[0-9a-fA-F]{3,4}/);
+  if (!matchResult) return prop.includes("background-size");
+  const [color] = matchResult;
+  const colors = Object.values(colorVars) || [];
+  if (colors.includes(color)) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /*
@@ -108,16 +119,24 @@ const reducePlugin = postcss.plugin("reducePlugin", () => {
     }
     let removeRule = true;
     rule.walkDecls(decl => {
-      if (
-        !decl.prop.includes("color") &&
-        !decl.prop.includes("background") &&
-        !decl.prop.includes("border") &&
-        !decl.prop.includes("box-shadow") ||
-        (decl.prop.includes("background") && !decl.value.includes('#'))
-      ) {
-        decl.remove();
+      if (onlyRemainMainColor) {
+        if (!isContainColor(decl.value, decl.prop)) {
+          decl.remove();
+        } else {
+          removeRule = false;
+        }
       } else {
-        removeRule = false;
+        if (
+          !decl.prop.includes("color") &&
+          !decl.prop.includes("background") &&
+          !decl.prop.includes("border") &&
+          !decl.prop.includes("box-shadow") ||
+          (decl.prop.includes("background") && !decl.value.includes('#'))
+        ) {
+          decl.remove();
+        } else {
+          removeRule = false;
+        }
       }
     });
     if (removeRule) {
@@ -290,10 +309,11 @@ function generateTheme({
   outputFilePath,
   srcAlias,
   resolvePath,
-  themeVariables = ['@primary-color'],
   generateScopedName, // NOTE modify: 自定义生成局部 css 类名
+  pureLess, // 只保留主题色相关的样式到 less 文件中
 }) {
   return new Promise((resolve, reject) => {
+    onlyRemainMainColor = pureLess;
     /*
       Ant Design Specific Files (Change according to your project structure)
       You can even use different less based css framework and create color.less for  that
@@ -325,6 +345,9 @@ function generateTheme({
     */
     varFile = varFile || path.join(antdStylesDir, "./style/themes/default.less");
 
+    const paletteLess = fs.readFileSync(varFile, 'utf8');
+    const variables = lessToJs(paletteLess);
+
     let content = fs.readFileSync(entry).toString();
     content += "\n";
     styles.concat(businessStyles).forEach(style => {
@@ -337,7 +360,7 @@ function generateTheme({
     }
     hashCache = hashCode;
     let themeCompiledVars = {};
-    let themeVars = themeVariables || ["@primary-color"];
+    let themeVars = Object.keys(variables) || ["@primary-color"];
     const lessPaths = [
       path.join(antdStylesDir, "./style"),
       stylesDir,
@@ -380,6 +403,7 @@ function generateTheme({
         css = css.replace(/(\/.*\/)/g, "");
         const regex = /.(?=\S*['-])([.a-zA-Z0-9'-]+)\ {\n\ \ color:\ (.*);/g;
         themeCompiledVars = getMatches(css, regex);
+        colorVars = themeCompiledVars;
         content = `${content}\n${colorsLess}`;
         return render(content, lessPaths).then(({ css }) => {
           return getCssModulesStyles(stylesDir, antdStylesDir, { generateScopedName, srcAlias, resolvePath })
