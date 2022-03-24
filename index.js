@@ -435,13 +435,12 @@ function generateTheme({
           css = css.replace(new RegExp(`${color}`, "g"), varName);
         });
 
-        css = `${colorsLess}\n${css}`;
+        css = `${colorsLess}\n html{\n${css}\n}`;
 
         themeVars.reverse().forEach(varName => {
           css = css.replace(new RegExp(`${varName}(\ *):(.*);`, 'g'), '');
           css = `${varName}: ${mappings[varName]};\n${css}\n`;
-        });
-        css = `html{\n${css}\n}`;
+        });        
         if (outputFilePath) {
           fs.writeFileSync(outputFilePath, css);
           console.log(
