@@ -441,6 +441,7 @@ function generateTheme({
           css = css.replace(new RegExp(`${varName}(\ *):(.*);`, 'g'), '');
           css = `${varName}: ${mappings[varName]};\n${css}\n`;
         });
+        css = `html{\n${css}\n}`;
         if (outputFilePath) {
           fs.writeFileSync(outputFilePath, css);
           console.log(
